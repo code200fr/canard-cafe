@@ -1,0 +1,29 @@
+services:
+  cpc_app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: ${ENV}
+    command: npm run start:dev
+    volumes:
+      - .:/app
+      - /app/node_modules
+    ports:
+      - "${APP_PORT}:${APP_INTERNAL_PORT}"
+    depends_on:
+      - cpc_mongo
+    environment:
+      NODE_ENV: ${ENV}
+      PORT: ${APP_INTERNAL_PORT}
+
+  cpc_mongo:
+    image: mongo
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
+    restart: always
+    volumes:
+      - mongodb_data_container:/data/db
+
+volumes:
+  mongodb_data_container:
