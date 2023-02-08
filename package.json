@@ -19,7 +19,8 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "scrap": "node dist/cli scrap",
-    "parse": "node dist/cli parse"
+    "parse": "node dist/cli parse",
+    "process": "node dist/cli process"
   },
   "dependencies": {
     "@nestjs/axios": "^2.0.0",

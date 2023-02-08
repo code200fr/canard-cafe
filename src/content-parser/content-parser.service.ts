@@ -17,34 +17,34 @@ export class ContentParserService {
       .filter((file) => !file.isDirectory())
       .map((file) => file.name);
 
-    const pages: ParsedTopicPage[] = [];
+    const promises: Promise<ParsedTopicPage>[] = [];
 
     for (const file of files) {
       const filePath: string = path.join(topicPath, file);
-      const topicPage: ParsedTopicPage = await this.parseFile(filePath);
-      pages.push(topicPage);
+
+      promises.push(
+        this.parseFile(filePath, id).catch((e) => {
+          this.logger.error(filePath, e);
+          throw e;
+        }),
+      );
     }
 
-    return pages;
+    return Promise.all(promises);
   }
 
-  async parseFile(filePath: string): Promise<ParsedTopicPage> {
+  async parseFile(filePath: string, topicId: number): Promise<ParsedTopicPage> {
     const html: string = fs.readFileSync(filePath, 'utf8');
     const root: HTMLElement = parse(html);
 
     const titleElement: HTMLElement = root.querySelector('head title');
-    const idElement: HTMLElement = root.querySelector(
-      'input[type="hidden"][name="t"]',
-    );
     const canonicalElement: HTMLElement = root.querySelector(
       'link[rel="canonical"]',
     );
-
     const title: string = titleElement.textContent.replace(
-      /( \- Page \d+)/gm,
+      /( - Page \d+)/gm,
       '',
     );
-    const topicId: number = parseInt(idElement.attributes['value']);
     const href: string = canonicalElement.attributes['href'];
 
     const baseUrl: string = href.split('?')[0];
@@ -52,10 +52,7 @@ export class ContentParserService {
     const topicUrl: string =
       'https://forum.canardpc.com' + parts[0] + '/' + parts[1];
     const page: number =
-      parts.length > 2 ? Number(parts[2].replace('/page', '')) : 1;
-
-    this.logger.log(title);
-
+      parts.length > 2 ? Number(parts[2].replace('page', '')) : 1;
     const messageElements: HTMLElement[] =
       root.querySelectorAll('.postcontainer');
 
@@ -115,9 +112,12 @@ export class ContentParserService {
           from = quoteFromElement.textContent.trim();
         }
 
-        const message: string = quoteElement
-          .querySelector('.message')
-          .textContent.trim();
+        const quoteMessageElement = quoteElement.querySelector('.message');
+        let message: string;
+
+        if (quoteMessageElement) {
+          message = quoteMessageElement.textContent.trim();
+        }
 
         quoteElement.remove();
 
@@ -129,11 +129,35 @@ export class ContentParserService {
         });
       }
 
+      const messageContentElement: HTMLElement =
+        messageElement.querySelector('.postcontent');
+
+      const smileys: string[] = messageContentElement
+        .querySelectorAll('img[title]')
+        .map((smileyElement: HTMLElement) => {
+          return smileyElement.attributes['title'];
+        });
+
+      const dateStr: string = messageElement
+        .querySelector('.postdate .date')
+        .textContent.trim();
+
+      const fullDateParts: string[] = dateStr
+        .split(',')
+        .map((entry) => entry.trim());
+      const dp: string[] = fullDateParts[0].split('/'); // dp = date parts
+      const tp: string[] = fullDateParts[1].split('h'); // tp = time parts
+      const isoDate = `${dp[2]}-${dp[1]}-${dp[0]} ${tp[0]}:${tp[1]}`;
+      const timestamp: number = Date.parse(isoDate);
+
       const post: ParsedPost = {
         author: author,
         quotes: quotes,
         page: page,
+        date: timestamp,
         id: messageId,
+        message: messageContentElement.textContent.trim(),
+        smileys: smileys,
       };
 
       topicPage.posts.push(post);

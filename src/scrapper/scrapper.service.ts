@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { Observable } from 'rxjs';
 import { AxiosResponse } from 'axios';
@@ -8,6 +8,7 @@ import fs from 'fs';
 @Injectable()
 export class ScrapperService {
   delay = 2000;
+  protected readonly logger = new Logger(ScrapperService.name);
 
   constructor(private readonly httpService: HttpService) {}
 
@@ -16,7 +17,7 @@ export class ScrapperService {
   }
 
   async loadTopic(topicUrl: string): Promise<void> {
-    console.log('Loading next topic......');
+    this.logger.log('Loading next topic......');
     let page = 1;
 
     let content: string = await this.loadPage(topicUrl, page);
@@ -63,7 +64,7 @@ export class ScrapperService {
 
   protected async loadPage(topicUrl: string, page = 1): Promise<string> {
     const url: string = this.getPageUrl(topicUrl, page);
-    console.info(url);
+    this.logger.log(url);
 
     return new Promise((resolve: (value: string) => void) => {
       this.load(url).subscribe((content: AxiosResponse<string>) => {

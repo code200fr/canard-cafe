@@ -4,17 +4,20 @@ interface ParsedTopicPage {
   posts: ParsedPost[];
 }
 
-interface ParsedPost {
-  id: number;
-  page: number;
-  author: ParsedAuthor;
-  quotes?: ParsedQuote[];
-}
-
 interface ParsedTopic {
   id: number;
   title: string;
   url: string;
+}
+
+interface ParsedPost {
+  id: number;
+  page: number;
+  message: string;
+  date: number;
+  author: ParsedAuthor;
+  quotes?: ParsedQuote[];
+  smileys?: string[];
 }
 
 interface ParsedAuthor {
