@@ -6,8 +6,9 @@ import { INestApplicationContext, Logger } from '@nestjs/common';
 import { ContentParserService } from './content-parser/content-parser.service';
 import * as process from 'process';
 import path from 'path';
-import { TfidfService, VectorMap } from './processor/tfidf/tfidf.service';
-import { TfidfDocument } from './processor/tfidf/tfidf-document';
+import { TfidfService, TopicTokens } from './processor/tfidf/tfidf.service';
+import { TopicRepositoryService } from './topic/topic-repository/topic-repository.service';
+import { Topic } from './schemas/topic.schema';
 
 enum Action {
   Scrap = 'scrap',
@@ -43,23 +44,33 @@ async function runProcess(app: INestApplicationContext) {
   );
 
   const tfidf: TfidfService = app.get(TfidfService);
-  const documents: TfidfDocument[] = [];
+  const repo: TopicRepositoryService = app.get(TopicRepositoryService);
+  logger.log('Processing data');
 
-  data.forEach((pages: ParsedTopicPage[]) => {
-    documents.push(tfidf.buildTopicDocument(pages));
+  const tokens: TopicTokens[] = tfidf.fromData(data);
+
+  await repo.truncate();
+
+  const promises: Promise<Topic>[] = [];
+
+  logger.log('Persisting data');
+
+  data.forEach((pages: ParsedTopicPage[], index: number) => {
+    const p = repo
+      .create(pages[0].topic, tokens[index])
+      .catch((e) => {
+        logger.error(e);
+        throw e;
+      })
+      .then((topic: Topic) => {
+        logger.debug(`Created document : ${topic.title}`);
+        return topic;
+      });
+
+    promises.push(p);
   });
 
-  const vectors: VectorMap[] = tfidf.computeVectors(documents);
-
-  documents.forEach((document: TfidfDocument, index: number) => {
-    logger.debug(data[index][0].topic.title);
-    logger.debug(
-      tfidf
-        .getTopTokens(vectors, index, 100)
-        .map((value: [string, number]) => value[0])
-        .join(', '),
-    );
-  });
+  return Promise.allSettled(promises);
 }
 
 async function parse(app: INestApplicationContext) {

@@ -1,12 +1,14 @@
-import { Controller, Get } from '@nestjs/common';
-import { AppService } from './app.service';
+import { Controller, Get, Inject, Query } from '@nestjs/common';
+import { TopicRepositoryService } from './topic/topic-repository/topic-repository.service';
 
 @Controller()
 export class AppController {
-  constructor(private readonly appService: AppService) {}
+  constructor(
+    @Inject(TopicRepositoryService) private topicRepo: TopicRepositoryService,
+  ) {}
 
   @Get()
-  getHello(): string {
-    return ':D';
+  async home(@Query('q') token: string) {
+    return this.topicRepo.search(token);
   }
 }

@@ -81,16 +81,18 @@ export class TfidfService {
     return vectors;
   }
 
-  getTopTokens(
-    vectors: VectorMap[],
-    index: number,
-    max = 30,
-  ): [string, number][] {
+  getTopTokens(vectors: VectorMap[], index: number, max = 30): TopicTokens {
     const vector: VectorMap = vectors[index];
 
-    const tokens: [string, number][] = Array.from(vector.entries())
+    const tokens: TopicTokens = Array.from(vector.entries())
       .filter((d) => d[1] > 0)
-      .sort((a, b) => b[1] - a[1]);
+      .sort((a, b) => b[1] - a[1])
+      .map((token: [string, number]) => {
+        return {
+          token: token[0],
+          freq: token[1],
+        };
+      });
 
     return tokens.slice(0, max);
   }
@@ -113,8 +115,29 @@ export class TfidfService {
 
     return new TfidfDocument(index);
   }
+
+  fromData(data: ParsedTopicPage[][], maxTokens = 100): TopicTokens[] {
+    const documents: TfidfDocument[] = [];
+
+    data.forEach((pages: ParsedTopicPage[]) => {
+      documents.push(this.buildTopicDocument(pages));
+    });
+
+    const vectors: VectorMap[] = this.computeVectors(documents);
+    const topicTokens: TopicTokens[] = [];
+
+    documents.forEach((document: TfidfDocument, index: number) => {
+      topicTokens[index] = this.getTopTokens(vectors, index, maxTokens);
+    });
+
+    return topicTokens;
+  }
 }
 
 type FrequencyMap = Map<string, number>;
 type WeightMap = Map<string, number>;
 export type VectorMap = Map<string, number>;
+export type TopicTokens = Array<{
+  token: string;
+  freq: number;
+}>;
