@@ -1,6 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument } from 'mongoose';
-import { TopicTokens } from '../processor/tfidf/tfidf.service';
+import { Tokens } from '../processor/tfidf/tfidf.service';
 
 export type TopicDocument = HydratedDocument<Topic>;
 
@@ -16,7 +16,7 @@ export class Topic {
   url: string;
 
   @Prop()
-  tokens: TopicTokens;
+  tokens: Tokens;
 }
 
 export const TopicSchema = SchemaFactory.createForClass(Topic);

@@ -6,9 +6,21 @@ import { INestApplicationContext, Logger } from '@nestjs/common';
 import { ContentParserService } from './content-parser/content-parser.service';
 import * as process from 'process';
 import path from 'path';
-import { TfidfService, TopicTokens } from './processor/tfidf/tfidf.service';
+import {
+  AllTokens,
+  TfidfService,
+  Tokens,
+} from './processor/tfidf/tfidf.service';
 import { TopicRepositoryService } from './topic/topic-repository/topic-repository.service';
-import { Topic } from './schemas/topic.schema';
+import { Topic } from './topic/topic.schema';
+import {
+  ParsedData,
+  ParsedIndex,
+  ParsedTopic,
+  ParsedUser,
+} from './content-parser/parsed-index';
+import { UserRepositoryService } from './user/user-repository.service';
+import { User } from './user/user.schema';
 
 enum Action {
   Scrap = 'scrap',
@@ -39,32 +51,51 @@ async function bootstrap() {
 }
 
 async function runProcess(app: INestApplicationContext) {
-  const data: ParsedTopicPage[][] = JSON.parse(
+  const data: ParsedData = JSON.parse(
     fs.readFileSync('./var/data.json', 'utf-8'),
   );
 
+  const index: ParsedIndex = new ParsedIndex().unSerialize(data);
   const tfidf: TfidfService = app.get(TfidfService);
-  const repo: TopicRepositoryService = app.get(TopicRepositoryService);
   logger.log('Processing data');
 
-  const tokens: TopicTokens[] = tfidf.fromData(data);
+  const tokens: AllTokens = tfidf.allFromIndex(index);
 
-  await repo.truncate();
-
-  const promises: Promise<Topic>[] = [];
+  const promises: Promise<Topic | User>[] = [];
 
   logger.log('Persisting data');
 
-  data.forEach((pages: ParsedTopicPage[], index: number) => {
-    const p = repo
-      .create(pages[0].topic, tokens[index])
+  const topicRepo: TopicRepositoryService = app.get(TopicRepositoryService);
+  const userRepo: UserRepositoryService = app.get(UserRepositoryService);
+
+  await topicRepo.truncate();
+  await userRepo.truncate();
+
+  index.topics.forEach((topic: ParsedTopic) => {
+    const p = topicRepo
+      .create(topic, tokens.topics.get(topic.id))
       .catch((e) => {
         logger.error(e);
         throw e;
       })
       .then((topic: Topic) => {
-        logger.debug(`Created document : ${topic.title}`);
+        logger.debug(`Created topic document : ${topic.title}`);
         return topic;
+      });
+
+    promises.push(p);
+  });
+
+  index.users.forEach((user: ParsedUser) => {
+    const p = userRepo
+      .create(user, tokens.users.get(user.id))
+      .catch((e) => {
+        logger.error(e);
+        throw e;
+      })
+      .then((user: User) => {
+        logger.debug(`Created user document : ${user.name}`);
+        return user;
       });
 
     promises.push(p);
@@ -80,10 +111,10 @@ async function parse(app: INestApplicationContext) {
     })
     .filter((dir) => dir.isDirectory())
     .map((dir) => dir.name)
-    .slice(0, 30);
+    .slice(0, 150);
 
   const parser: ContentParserService = app.get(ContentParserService);
-  const data: ParsedTopicPage[][] = [];
+  const index: ParsedIndex = new ParsedIndex();
 
   console.time('Parsing data');
   let n = 0;
@@ -91,16 +122,21 @@ async function parse(app: INestApplicationContext) {
 
   for (const dir of dirs) {
     const id: number = parseInt(dir, 10);
-    const pages: ParsedTopicPage[] = await parser.parseTopic(id);
-    data.push(pages);
+    await parser.parseTopic(id, index);
 
     n++;
     logger.log(`Parsed #${id}: ${n}/${m}`);
   }
 
+  logger.log('Builder quotes index');
+  parser.buildQuoteUserIndex(index);
+
   console.timeEnd('Parsing data');
 
-  fs.writeFileSync(path.join('./var', 'data.json'), JSON.stringify(data));
+  fs.writeFileSync(
+    path.join('./var', 'data.json'),
+    JSON.stringify(index.serialize()),
+  );
 }
 
 async function scrap(app: INestApplicationContext) {

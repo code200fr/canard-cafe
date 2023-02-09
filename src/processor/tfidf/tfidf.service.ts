@@ -1,14 +1,22 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { TfidfDocument } from './tfidf-document';
+import {
+  ParsedIndex,
+  ParsedPost,
+  ParsedTopic,
+  ParsedUser,
+} from '../../content-parser/parsed-index';
+import StopWords from '../../etc/stopwords.json';
 
-// Inspired from https://github.com/kerryrodden/tiny-tfidf
+// Inspired by https://github.com/kerryrodden/tiny-tfidf
 
 @Injectable()
 export class TfidfService {
   protected readonly K1 = 2.0;
   protected readonly b = 0.75;
+  protected logger: Logger = new Logger(TfidfService.name);
 
-  stopwords: string[] = [];
+  stopWords: string[] = StopWords;
 
   protected computeCollectionFrequencies(
     documents: TfidfDocument[],
@@ -18,7 +26,7 @@ export class TfidfService {
     for (const document of documents) {
       document
         .getUniqueTokens()
-        .filter((token) => !this.stopwords.includes(token))
+        .filter((token) => !this.stopWords.includes(token))
         .forEach((token) => {
           if (frequencies.has(token)) {
             return frequencies.set(token, frequencies.get(token) + 1);
@@ -81,10 +89,10 @@ export class TfidfService {
     return vectors;
   }
 
-  getTopTokens(vectors: VectorMap[], index: number, max = 30): TopicTokens {
+  getTopTokens(vectors: VectorMap[], index: number, max = 30): Tokens {
     const vector: VectorMap = vectors[index];
 
-    const tokens: TopicTokens = Array.from(vector.entries())
+    const tokens: Tokens = Array.from(vector.entries())
       .filter((d) => d[1] > 0)
       .sort((a, b) => b[1] - a[1])
       .map((token: [string, number]) => {
@@ -97,47 +105,101 @@ export class TfidfService {
     return tokens.slice(0, max);
   }
 
-  buildTopicDocument(topicPages: ParsedTopicPage[]): TfidfDocument {
-    const index: string[] = [];
+  buildTopicDocument(topic: ParsedTopic): TfidfDocument {
+    let all = '';
 
-    for (const page of topicPages) {
-      for (const post of page.posts) {
-        const tokens = post.message
-          .split(/[\s\.,!?\(\)\:'"\-\/]+/g)
-          .map((token) => token.trim().toLocaleLowerCase('fr'))
-          .filter((token) => token != '')
-          .filter((token) => token.length > 2)
-          .filter((token) => !token.match(/^\d/));
+    topic.posts.forEach((post: ParsedPost) => {
+      all += post.message + ' ';
+    });
 
-        index.push(...tokens);
-      }
-    }
-
-    return new TfidfDocument(index);
+    return new TfidfDocument(this.parseMessage(all), topic.id);
   }
 
-  fromData(data: ParsedTopicPage[][], maxTokens = 100): TopicTokens[] {
-    const documents: TfidfDocument[] = [];
+  buildUserDocument(user: ParsedUser): TfidfDocument {
+    const all: string = user.messages.join(' ');
 
-    data.forEach((pages: ParsedTopicPage[]) => {
-      documents.push(this.buildTopicDocument(pages));
+    return new TfidfDocument(this.parseMessage(all), user.id);
+  }
+
+  protected parseMessage(message: string): string[] {
+    return message
+      .split(/[\s\.,!?\(\)\:'"\-\/]+/g)
+      .map((token) => token.trim().toLocaleLowerCase('fr'))
+      .filter((token) => token != '')
+      .filter((token) => token.length > 2)
+      .filter((token) => !token.match(/^\d/));
+  }
+
+  allFromIndex(
+    index: ParsedIndex,
+    minMessages = 200,
+    maxTokens = 100,
+  ): AllTokens {
+    const topicDocuments: TfidfDocument[] = [];
+    const userDocuments: TfidfDocument[] = [];
+
+    this.logger.log('Building topic documents...');
+    index.topics.forEach((topic: ParsedTopic) => {
+      if (topic.posts.length < minMessages) {
+        return;
+      }
+
+      topicDocuments.push(this.buildTopicDocument(topic));
+    });
+    this.logger.log(`Built ${topicDocuments.length} topic documents`);
+
+    this.logger.log('Building user documents...');
+    index.aggregateUserPosts();
+
+    index.users.forEach((user: ParsedUser) => {
+      if (!user.messages || user.messages.length < minMessages) {
+        return;
+      }
+
+      userDocuments.push(this.buildUserDocument(user));
+    });
+    this.logger.log(`Built ${userDocuments.length} user documents`);
+
+    this.logger.log('Computing topic vectors...');
+    const topicVectors: VectorMap[] = this.computeVectors(topicDocuments);
+
+    this.logger.log('Computing user vectors...');
+    const userVectors: VectorMap[] = this.computeVectors(userDocuments);
+
+    const topicTokens: Map<number, Tokens> = new Map<number, Tokens>();
+    const userTokens: Map<number, Tokens> = new Map<number, Tokens>();
+
+    this.logger.log('Extracting topic tokens...');
+    topicDocuments.forEach((document: TfidfDocument, idx: number) => {
+      topicTokens.set(
+        document.id,
+        this.getTopTokens(topicVectors, idx, maxTokens),
+      );
     });
 
-    const vectors: VectorMap[] = this.computeVectors(documents);
-    const topicTokens: TopicTokens[] = [];
-
-    documents.forEach((document: TfidfDocument, index: number) => {
-      topicTokens[index] = this.getTopTokens(vectors, index, maxTokens);
+    this.logger.log('Extracting user tokens...');
+    userDocuments.forEach((document: TfidfDocument, idx: number) => {
+      userTokens.set(
+        document.id,
+        this.getTopTokens(userVectors, idx, maxTokens),
+      );
     });
 
-    return topicTokens;
+    return {
+      topics: topicTokens,
+      users: userTokens,
+    };
   }
 }
 
 type FrequencyMap = Map<string, number>;
 type WeightMap = Map<string, number>;
 export type VectorMap = Map<string, number>;
-export type TopicTokens = Array<{
+export type Tokens = Array<{
   token: string;
   freq: number;
 }>;
+export type AllTokens = {
+  topics: Map<number, Tokens>;
+  users: Map<number, Tokens>;
+};

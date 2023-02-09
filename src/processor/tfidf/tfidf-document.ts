@@ -1,7 +1,7 @@
 export class TfidfDocument {
   protected frequencies: Map<string, number>;
 
-  constructor(protected tokens: string[]) {
+  constructor(protected tokens: string[], public id: number) {
     this.computeFrequencies();
   }
 

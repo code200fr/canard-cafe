@@ -1,8 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Topic, TopicDocument } from '../../schemas/topic.schema';
+import { Topic, TopicDocument } from '../topic.schema';
 import { Model } from 'mongoose';
-import { TopicTokens } from '../../processor/tfidf/tfidf.service';
+import { Tokens } from '../../processor/tfidf/tfidf.service';
+import { ParsedTopic } from '../../content-parser/parsed-index';
 
 @Injectable()
 export class TopicRepositoryService {
@@ -24,7 +25,7 @@ export class TopicRepositoryService {
     });
   }
 
-  async create(topic: ParsedTopic, tokens: TopicTokens): Promise<Topic> {
+  async create(topic: ParsedTopic, tokens: Tokens): Promise<Topic> {
     const created = new this.topicModel({
       id: topic.id,
       title: topic.title,
