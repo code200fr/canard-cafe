@@ -1,6 +1,11 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument } from 'mongoose';
 import { Tokens } from '../processor/tfidf/tfidf.service';
+import {
+  SmileyCount,
+  SmileyUsage,
+  UserSmileys,
+} from '../processor/smiley/smiley-processor.service';
 
 export type UserDocument = HydratedDocument<User>;
 
@@ -24,7 +29,11 @@ export class User {
   @Prop()
   tokens: Tokens;
 
-  getTopTokens: Function;
+  @Prop()
+  smileys: UserSmileys;
+
+  getTopTokens: () => string[];
+  getTopSmileys: () => string[];
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
@@ -40,4 +49,10 @@ UserSchema.methods.getTopTokens = function (): string[] {
       },
     )
     .map((token) => token.token);
+};
+
+UserSchema.methods.getTopSmileys = function (): SmileyCount[] {
+  return this.smileys.sort((a: SmileyCount, b: SmileyCount) => {
+    return a.count > b.count ? -1 : 1;
+  });
 };

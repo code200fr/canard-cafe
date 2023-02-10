@@ -92,6 +92,12 @@ export class ContentParserService {
 
       const userLink: HTMLElement = messageElement.querySelector('.username');
       const authorUrl: string = userLink.attributes['href'];
+
+      if (!authorUrl) {
+        // guest message
+        continue;
+      }
+
       const authorId = Number(/\/(\d+)/gm.exec(authorUrl)[1]);
 
       if (index.users.has(authorId)) {

@@ -7,11 +7,15 @@ import {
   ParsedUser,
 } from '../../content-parser/parsed-index';
 import StopWords from '../../etc/stopwords.json';
+import { ProcessorInterface } from '../processor.interface';
+import { ProcessorOptions } from '../processor-factory.service';
 
 // Inspired by https://github.com/kerryrodden/tiny-tfidf
 
 @Injectable()
-export class TfidfService {
+export class TfidfService implements ProcessorInterface {
+  name = 'tfidf';
+
   protected readonly K1 = 2.0;
   protected readonly b = 0.75;
   protected logger: Logger = new Logger(TfidfService.name);
@@ -105,20 +109,48 @@ export class TfidfService {
     return tokens.slice(0, max);
   }
 
-  buildTopicDocument(topic: ParsedTopic): TfidfDocument {
+  buildTopicDocument(topic: ParsedTopic, keepRatio: number): TfidfDocument {
     let all = '';
 
     topic.posts.forEach((post: ParsedPost) => {
       all += post.message + ' ';
     });
 
-    return new TfidfDocument(this.parseMessage(all), topic.id);
+    const tokens: string[] = this.pickRandomElements(
+      this.parseMessage(all),
+      keepRatio,
+    );
+
+    return new TfidfDocument(tokens, topic.id);
   }
 
-  buildUserDocument(user: ParsedUser): TfidfDocument {
+  buildUserDocument(user: ParsedUser, keepRatio: number): TfidfDocument {
     const all: string = user.messages.join(' ');
 
-    return new TfidfDocument(this.parseMessage(all), user.id);
+    const tokens: string[] = this.pickRandomElements(
+      this.parseMessage(all),
+      keepRatio,
+    );
+
+    return new TfidfDocument(tokens, user.id);
+  }
+
+  protected pickRandomElements(arr, ratio) {
+    let n: number = Math.round(arr.length * ratio);
+    const result = new Array(n);
+    let len = arr.length;
+    const taken = new Array(len);
+
+    if (n > len) {
+      throw new RangeError('getRandom: more elements taken than available');
+    }
+
+    while (n--) {
+      const x = Math.floor(Math.random() * len);
+      result[n] = arr[x in taken ? taken[x] : x];
+      taken[x] = --len in taken ? taken[len] : len;
+    }
+    return result;
   }
 
   protected parseMessage(message: string): string[] {
@@ -130,13 +162,16 @@ export class TfidfService {
       .filter((token) => !token.match(/^\d/));
   }
 
-  allFromIndex(
+  async run(
     index: ParsedIndex,
-    minMessages = 200,
-    maxTokens = 100,
-  ): AllTokens {
+    options?: ProcessorOptions,
+  ): Promise<AllTokens> {
     const topicDocuments: TfidfDocument[] = [];
     const userDocuments: TfidfDocument[] = [];
+
+    const minMessages = Number(options?.minMessages ?? 200);
+    const maxTokens = Number(options?.maxTokens ?? 100);
+    const keepRatio = Number(options?.keepRatio ?? 0.1);
 
     this.logger.log('Building topic documents...');
     index.topics.forEach((topic: ParsedTopic) => {
@@ -144,7 +179,7 @@ export class TfidfService {
         return;
       }
 
-      topicDocuments.push(this.buildTopicDocument(topic));
+      topicDocuments.push(this.buildTopicDocument(topic, keepRatio));
     });
     this.logger.log(`Built ${topicDocuments.length} topic documents`);
 
@@ -156,7 +191,7 @@ export class TfidfService {
         return;
       }
 
-      userDocuments.push(this.buildUserDocument(user));
+      userDocuments.push(this.buildUserDocument(user, keepRatio));
     });
     this.logger.log(`Built ${userDocuments.length} user documents`);
 
@@ -195,6 +230,9 @@ export class TfidfService {
 type FrequencyMap = Map<string, number>;
 type WeightMap = Map<string, number>;
 export type VectorMap = Map<string, number>;
+export type TokensMap = {
+  [id: number]: Tokens;
+};
 export type Tokens = Array<{
   token: string;
   freq: number;

@@ -6,32 +6,25 @@ import { INestApplicationContext, Logger } from '@nestjs/common';
 import { ContentParserService } from './content-parser/content-parser.service';
 import * as process from 'process';
 import path from 'path';
+import { ParsedData, ParsedIndex } from './content-parser/parsed-index';
 import {
-  AllTokens,
-  TfidfService,
-  Tokens,
-} from './processor/tfidf/tfidf.service';
-import { TopicRepositoryService } from './topic/topic-repository/topic-repository.service';
-import { Topic } from './topic/topic.schema';
-import {
-  ParsedData,
-  ParsedIndex,
-  ParsedTopic,
-  ParsedUser,
-} from './content-parser/parsed-index';
+  ProcessorFactoryService,
+  ProcessorsData,
+} from './processor/processor-factory.service';
+import { TopicRepositoryService } from './topic/topic-repository.service';
 import { UserRepositoryService } from './user/user-repository.service';
-import { User } from './user/user.schema';
 
 enum Action {
   Scrap = 'scrap',
   Parse = 'parse',
   Process = 'process',
+  Persist = 'persist',
 }
 
 const logger: Logger = new Logger('CLI');
+const args: string[] = process.argv.slice(2);
 
 async function bootstrap() {
-  const args: string[] = process.argv.slice(2);
   const app = await NestFactory.createApplicationContext(AppModule);
   const action: Action = args[0] as Action;
 
@@ -45,9 +38,49 @@ async function bootstrap() {
     case Action.Process:
       await runProcess(app);
       break;
+    case Action.Persist:
+      await persist(app);
+      break;
   }
 
+  logger.log('☑️ Done');
   await app.close();
+}
+
+async function persist(app: INestApplicationContext) {
+  const data: ParsedData = JSON.parse(
+    fs.readFileSync('./var/data.json', 'utf-8'),
+  );
+
+  const factory: ProcessorFactoryService = app.get(ProcessorFactoryService);
+  const index: ParsedIndex = new ParsedIndex().unSerialize(data);
+  const processors: ProcessorsData = new Map<string, unknown>();
+
+  factory.names().forEach((processorName: string) => {
+    const processorDataPath: string = path.join(
+      process.cwd(),
+      'var',
+      'processed',
+      `${processorName}.json`,
+    );
+
+    if (!fs.existsSync(processorDataPath)) {
+      throw `Missing ${processorName} data`;
+    }
+
+    const rawData: string = fs.readFileSync(processorDataPath, 'utf8');
+    const processorData: unknown = JSON.parse(rawData);
+    processors.set(processorName, processorData);
+  });
+
+  const topicRepo: TopicRepositoryService = app.get(TopicRepositoryService);
+  const userRepo: UserRepositoryService = app.get(UserRepositoryService);
+
+  logger.log('Importing topics...');
+  await topicRepo.importAll(index, processors);
+
+  logger.log('Importing users...');
+  await userRepo.importAll(index, processors);
 }
 
 async function runProcess(app: INestApplicationContext) {
@@ -56,52 +89,36 @@ async function runProcess(app: INestApplicationContext) {
   );
 
   const index: ParsedIndex = new ParsedIndex().unSerialize(data);
-  const tfidf: TfidfService = app.get(TfidfService);
-  logger.log('Processing data');
+  const factory: ProcessorFactoryService = app.get(ProcessorFactoryService);
 
-  const tokens: AllTokens = tfidf.allFromIndex(index);
+  const persistDir: string = path.join(process.cwd(), 'var', 'processed');
 
-  const promises: Promise<Topic | User>[] = [];
+  if (!fs.existsSync(persistDir)) {
+    fs.mkdirSync(persistDir);
+  }
 
-  logger.log('Persisting data');
+  const jsonReplacer = (key: string, value: unknown) => {
+    if (value instanceof Map) {
+      return Array.from(value).reduce((obj, [key, value]) => {
+        obj[key] = value;
+        return obj;
+      }, {});
+    } else {
+      return value;
+    }
+  };
 
-  const topicRepo: TopicRepositoryService = app.get(TopicRepositoryService);
-  const userRepo: UserRepositoryService = app.get(UserRepositoryService);
+  const processorName: string = args[1];
 
-  await topicRepo.truncate();
-  await userRepo.truncate();
+  if (factory.hasProcessor(processorName)) {
+    logger.log(`▶️ Processor ${processorName} has started`);
+    const processorData: unknown = await factory.run(processorName, index);
 
-  index.topics.forEach((topic: ParsedTopic) => {
-    const p = topicRepo
-      .create(topic, tokens.topics.get(topic.id))
-      .catch((e) => {
-        logger.error(e);
-        throw e;
-      })
-      .then((topic: Topic) => {
-        logger.debug(`Created topic document : ${topic.title}`);
-        return topic;
-      });
-
-    promises.push(p);
-  });
-
-  index.users.forEach((user: ParsedUser) => {
-    const p = userRepo
-      .create(user, tokens.users.get(user.id))
-      .catch((e) => {
-        logger.error(e);
-        throw e;
-      })
-      .then((user: User) => {
-        logger.debug(`Created user document : ${user.name}`);
-        return user;
-      });
-
-    promises.push(p);
-  });
-
-  return Promise.allSettled(promises);
+    fs.writeFileSync(
+      path.join(persistDir, `${processorName}.json`),
+      JSON.stringify(processorData, jsonReplacer),
+    );
+  }
 }
 
 async function parse(app: INestApplicationContext) {
@@ -110,8 +127,7 @@ async function parse(app: INestApplicationContext) {
       withFileTypes: true,
     })
     .filter((dir) => dir.isDirectory())
-    .map((dir) => dir.name)
-    .slice(0, 150);
+    .map((dir) => dir.name);
 
   const parser: ContentParserService = app.get(ContentParserService);
   const index: ParsedIndex = new ParsedIndex();

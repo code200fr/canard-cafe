@@ -7,10 +7,12 @@ import { ContentParserService } from './content-parser/content-parser.service';
 import { TfidfService } from './processor/tfidf/tfidf.service';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Topic, TopicSchema } from './topic/topic.schema';
-import { TopicRepositoryService } from './topic/topic-repository/topic-repository.service';
+import { TopicRepositoryService } from './topic/topic-repository.service';
 import { UserRepositoryService } from './user/user-repository.service';
 import { User, UserSchema } from './user/user.schema';
 import { UserController } from './user/user.controller';
+import { ProcessorFactoryService } from './processor/processor-factory.service';
+import { SmileyProcessorService } from './processor/smiley/smiley-processor.service';
 
 @Module({
   imports: [
@@ -26,7 +28,9 @@ import { UserController } from './user/user.controller';
     AppService,
     ScrapperService,
     ContentParserService,
+    ProcessorFactoryService,
     TfidfService,
+    SmileyProcessorService,
     TopicRepositoryService,
     UserRepositoryService,
   ],

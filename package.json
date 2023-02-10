@@ -21,7 +21,8 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "scrap": "node dist/cli scrap",
     "parse": "node dist/cli parse",
-    "process": "node dist/cli process"
+    "process": "node dist/cli process smiley",
+    "persist": "node dist/cli persist"
   },
   "dependencies": {
     "@nestjs/axios": "^2.0.0",

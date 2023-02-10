@@ -1,5 +1,5 @@
 import { Controller, Get, Inject, Param, Query } from '@nestjs/common';
-import { TopicRepositoryService } from './topic/topic-repository/topic-repository.service';
+import { TopicRepositoryService } from './topic/topic-repository.service';
 import { UserRepositoryService } from './user/user-repository.service';
 import { User } from './user/user.schema';
 
