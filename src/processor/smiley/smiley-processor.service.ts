@@ -6,7 +6,6 @@ import {
   ParsedTopic,
 } from '../../content-parser/parsed-index';
 import { ProcessorOptions } from '../processor-factory.service';
-import { Tokens } from '../tfidf/tfidf.service';
 
 @Injectable()
 export class SmileyProcessorService implements ProcessorInterface {
@@ -62,6 +61,7 @@ export type SmileyUsage = {
 export type SmileyCount = {
   smiley: string;
   count: number;
+  percent?: number;
 };
 
 export type UserSmileys = Array<SmileyCount>;

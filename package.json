@@ -2,7 +2,7 @@
   "name": "canard-cafe",
   "version": "0.0.1",
   "description": "",
-  "author": "",
+  "author": "Jonathan Prevost - Code 200",
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
@@ -21,7 +21,7 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "scrap": "node dist/cli scrap",
     "parse": "node dist/cli parse",
-    "process": "node dist/cli process smiley",
+    "process": "node dist/cli process user-topic",
     "persist": "node dist/cli persist"
   },
   "dependencies": {

@@ -13,6 +13,8 @@ import { User, UserSchema } from './user/user.schema';
 import { UserController } from './user/user.controller';
 import { ProcessorFactoryService } from './processor/processor-factory.service';
 import { SmileyProcessorService } from './processor/smiley/smiley-processor.service';
+import { QuoteProcessorService } from './processor/quote/quote-processor.service';
+import { UserTopicProcessorService } from './processor/user-topic/user-topic-processor.service';
 
 @Module({
   imports: [
@@ -31,6 +33,8 @@ import { SmileyProcessorService } from './processor/smiley/smiley-processor.serv
     ProcessorFactoryService,
     TfidfService,
     SmileyProcessorService,
+    QuoteProcessorService,
+    UserTopicProcessorService,
     TopicRepositoryService,
     UserRepositoryService,
   ],

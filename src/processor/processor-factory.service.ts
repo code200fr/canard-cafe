@@ -3,6 +3,8 @@ import { TfidfService } from './tfidf/tfidf.service';
 import { ProcessorInterface } from './processor.interface';
 import { ParsedIndex } from '../content-parser/parsed-index';
 import { SmileyProcessorService } from './smiley/smiley-processor.service';
+import { QuoteProcessorService } from './quote/quote-processor.service';
+import { UserTopicProcessorService } from './user-topic/user-topic-processor.service';
 
 @Injectable()
 export class ProcessorFactoryService {
@@ -14,9 +16,13 @@ export class ProcessorFactoryService {
   constructor(
     @Inject(TfidfService) tfidf: TfidfService,
     @Inject(SmileyProcessorService) smiley: SmileyProcessorService,
+    @Inject(QuoteProcessorService) quote: QuoteProcessorService,
+    @Inject(UserTopicProcessorService) userTopic: UserTopicProcessorService,
   ) {
     this.processors.set(tfidf.name, tfidf);
     this.processors.set(smiley.name, smiley);
+    this.processors.set(quote.name, quote);
+    this.processors.set(userTopic.name, userTopic);
   }
 
   hasProcessor(name: string): boolean {

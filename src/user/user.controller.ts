@@ -14,10 +14,11 @@ export class UserController {
       return [];
     }
 
-    q = q.toString().trim();
-
     // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions#escaping
-    q = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    q = q
+      .toString()
+      .trim()
+      .replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
     if (!q) {
       return [];
@@ -40,5 +41,12 @@ export class UserController {
     const user: User = await this.userRepo.byName(params.name);
 
     return user.getTopTokens();
+  }
+
+  @Get(':name')
+  async get(@Param() params) {
+    return this.userRepo
+      .byName(params.name)
+      .then((user: User) => user.serialize());
   }
 }

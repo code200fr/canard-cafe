@@ -2,6 +2,16 @@ export class ParsedIndex {
   public users: Map<number, ParsedUser> = new Map<number, ParsedUser>();
   public topics: Map<number, ParsedTopic> = new Map<number, ParsedTopic>();
 
+  public getUserNameIndex(): UserNameIndex {
+    const index: UserNameIndex = {};
+
+    this.users.forEach((user: ParsedUser) => {
+      index[user.name] = user.id;
+    });
+
+    return index;
+  }
+
   public aggregateUserPosts() {
     this.topics.forEach((topic: ParsedTopic) => {
       topic.posts.forEach((post: ParsedPost) => {
@@ -85,3 +95,7 @@ export interface ParsedQuote {
   authorName: string;
   author?: number; // ParsedUser.id, if available
 }
+
+export type UserNameIndex = {
+  [username: string]: number;
+};

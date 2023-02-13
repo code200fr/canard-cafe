@@ -15,6 +15,13 @@ import {
   SmileyUsage,
   UserSmileys,
 } from '../processor/smiley/smiley-processor.service';
+import { Quotes, UserQuotes } from '../processor/quote/quote-processor.service';
+import {
+  AllUserTopics,
+  FlatAllUserTopics,
+  UserTopic,
+  UserTopics,
+} from '../processor/user-topic/user-topic-processor.service';
 
 @Injectable()
 export class UserRepositoryService {
@@ -33,6 +40,13 @@ export class UserRepositoryService {
     const usersTokens = tfidf.users;
 
     const smiley = processors.get('smiley') as Record<'users', SmileyMap>;
+    const quotes = processors.get('quote') as Record<
+      'from' | 'by',
+      { [uid: number]: UserQuotes }
+    >;
+    const userTopics: FlatAllUserTopics = processors.get(
+      'user-topic',
+    ) as FlatAllUserTopics;
     const usersSmiley = smiley.users;
 
     const promises: Promise<User>[] = [];
@@ -50,12 +64,40 @@ export class UserRepositoryService {
       return arr;
     };
 
+    const quotesToArray = (quotes: UserQuotes): Quotes => {
+      const arr: Quotes = [];
+      for (const username in quotes) {
+        arr.push({
+          username: username,
+          count: quotes[username],
+        });
+      }
+
+      return arr;
+    };
+
+    const userTopicToArray = (userTopics: UserTopics): UserTopic[] => {
+      const arr: UserTopic[] = [];
+
+      for (const topicId in userTopics) {
+        arr.push(userTopics[topicId]);
+      }
+
+      return arr;
+    };
+
     index.users.forEach((user: ParsedUser) => {
+      const userQuotes: UserQuotes = quotes.from[user.id];
+      const byQuotes: UserQuotes = quotes.by[user.id];
+
       promises.push(
         this.create(
           user,
           usersTokens[user.id],
           smileyToArray(usersSmiley[user.id]),
+          quotesToArray(userQuotes),
+          quotesToArray(byQuotes),
+          userTopicToArray(userTopics[user.id]),
         ),
       );
     });
@@ -85,14 +127,21 @@ export class UserRepositoryService {
     user: ParsedUser,
     tokens: Tokens,
     smileys: UserSmileys,
+    quotes: Quotes,
+    quotesBy: Quotes,
+    userTopics: UserTopic[],
   ): Promise<User> {
     const created = new this.userModel({
       id: user.id,
       name: user.name,
       title: user.title,
+      avatar: user.avatar,
       url: user.url,
       tokens: tokens,
       smileys: smileys,
+      quotes: quotes,
+      quotesBy: quotesBy,
+      topics: userTopics,
     });
 
     return created.save();
