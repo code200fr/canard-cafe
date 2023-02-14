@@ -3,20 +3,27 @@ import { HydratedDocument } from 'mongoose';
 import { Tokens } from '../processor/tfidf/tfidf.service';
 import {
   SmileyCount,
-  SmileyUsage,
   UserSmileys,
 } from '../processor/smiley/smiley-processor.service';
-import {
-  Quote,
-  Quotes,
-  UserQuotes,
-} from '../processor/quote/quote-processor.service';
-import {
-  UserTopic,
-  UserTopicProcessorService,
-} from '../processor/user-topic/user-topic-processor.service';
+import { Quote, Quotes } from '../processor/quote/quote-processor.service';
+import { UserTopic } from '../processor/user-topic/user-topic-processor.service';
 
 export type UserDocument = HydratedDocument<User>;
+
+@Schema()
+export class UserSentiments {
+  @Prop()
+  negative: number;
+
+  @Prop()
+  neutral: number;
+
+  @Prop()
+  positive: number;
+}
+
+export const UserSentimentsSchema =
+  SchemaFactory.createForClass(UserSentiments);
 
 @Schema()
 export class User {
@@ -49,6 +56,12 @@ export class User {
 
   @Prop()
   topics: UserTopic[];
+
+  @Prop({ type: UserSentimentsSchema })
+  sentiments: UserSentiments;
+
+  @Prop()
+  datetime: string; // serialized JSON
 
   getTopTokens: () => { token: string; freq: number }[];
   getTopSmileys: () => SmileyCount[];
@@ -122,6 +135,8 @@ UserSchema.methods.serialize = function (): Partial<User> {
     smileys: this.getTopSmileys(),
     quotes: this.getTopQuotes().slice(0, 10),
     quotesBy: this.getTopQuotesBy().slice(0, 10),
-    topics: this.getTopTopics().slice(0, 6),
+    topics: this.getTopTopics().slice(0, 8),
+    sentiments: this.sentiments,
+    datetime: JSON.parse(this.datetime || 'null'),
   };
 };

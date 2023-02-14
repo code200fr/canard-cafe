@@ -22,6 +22,14 @@ import {
   UserTopic,
   UserTopics,
 } from '../processor/user-topic/user-topic-processor.service';
+import {
+  FlatUserSentiments,
+  UserSentiment,
+} from '../processor/sentiment/sentiment-processor.service';
+import {
+  FlatUserWeek,
+  Week,
+} from '../processor/datetime/datetime-processor.service';
 
 @Injectable()
 export class UserRepositoryService {
@@ -40,6 +48,7 @@ export class UserRepositoryService {
     const usersTokens = tfidf.users;
 
     const smiley = processors.get('smiley') as Record<'users', SmileyMap>;
+    const usersSmiley = smiley.users;
     const quotes = processors.get('quote') as Record<
       'from' | 'by',
       { [uid: number]: UserQuotes }
@@ -47,7 +56,14 @@ export class UserRepositoryService {
     const userTopics: FlatAllUserTopics = processors.get(
       'user-topic',
     ) as FlatAllUserTopics;
-    const usersSmiley = smiley.users;
+
+    const userSentiments: FlatUserSentiments = processors.get(
+      'sentiment',
+    ) as FlatUserSentiments;
+
+    const userDateTime: FlatUserWeek = processors.get(
+      'datetime',
+    ) as FlatUserWeek;
 
     const promises: Promise<User>[] = [];
 
@@ -98,6 +114,8 @@ export class UserRepositoryService {
           quotesToArray(userQuotes),
           quotesToArray(byQuotes),
           userTopicToArray(userTopics[user.id]),
+          userSentiments[user.id],
+          userDateTime[user.id],
         ),
       );
     });
@@ -130,6 +148,8 @@ export class UserRepositoryService {
     quotes: Quotes,
     quotesBy: Quotes,
     userTopics: UserTopic[],
+    sentiments: UserSentiment,
+    datetime: Week,
   ): Promise<User> {
     const created = new this.userModel({
       id: user.id,
@@ -142,6 +162,8 @@ export class UserRepositoryService {
       quotes: quotes,
       quotesBy: quotesBy,
       topics: userTopics,
+      sentiments: sentiments,
+      datetime: JSON.stringify(datetime),
     });
 
     return created.save();

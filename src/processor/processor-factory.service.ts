@@ -5,6 +5,8 @@ import { ParsedIndex } from '../content-parser/parsed-index';
 import { SmileyProcessorService } from './smiley/smiley-processor.service';
 import { QuoteProcessorService } from './quote/quote-processor.service';
 import { UserTopicProcessorService } from './user-topic/user-topic-processor.service';
+import { SentimentProcessorService } from './sentiment/sentiment-processor.service';
+import { DatetimeProcessorService } from './datetime/datetime-processor.service';
 
 @Injectable()
 export class ProcessorFactoryService {
@@ -18,11 +20,15 @@ export class ProcessorFactoryService {
     @Inject(SmileyProcessorService) smiley: SmileyProcessorService,
     @Inject(QuoteProcessorService) quote: QuoteProcessorService,
     @Inject(UserTopicProcessorService) userTopic: UserTopicProcessorService,
+    @Inject(SentimentProcessorService) sentiment: SentimentProcessorService,
+    @Inject(DatetimeProcessorService) datetime: DatetimeProcessorService,
   ) {
     this.processors.set(tfidf.name, tfidf);
     this.processors.set(smiley.name, smiley);
     this.processors.set(quote.name, quote);
     this.processors.set(userTopic.name, userTopic);
+    this.processors.set(sentiment.name, sentiment);
+    this.processors.set(datetime.name, datetime);
   }
 
   hasProcessor(name: string): boolean {

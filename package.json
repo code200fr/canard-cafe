@@ -21,7 +21,7 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "scrap": "node dist/cli scrap",
     "parse": "node dist/cli parse",
-    "process": "node dist/cli process user-topic",
+    "process": "node dist/cli process datetime",
     "persist": "node dist/cli persist"
   },
   "dependencies": {
@@ -31,7 +31,10 @@
     "@nestjs/mongoose": "^9.2.1",
     "@nestjs/platform-express": "^9.0.0",
     "axios": "^1.3.2",
+    "moment": "^2.29.4",
+    "moment-timezone": "^0.5.40",
     "mongoose": "^6.9.1",
+    "natural": "^6.2.0",
     "node-html-parser": "^6.1.4",
     "nodemon": "^2.0.20",
     "reflect-metadata": "^0.1.13",
