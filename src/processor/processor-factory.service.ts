@@ -7,6 +7,7 @@ import { QuoteProcessorService } from './quote/quote-processor.service';
 import { UserTopicProcessorService } from './user-topic/user-topic-processor.service';
 import { SentimentProcessorService } from './sentiment/sentiment-processor.service';
 import { DatetimeProcessorService } from './datetime/datetime-processor.service';
+import { StatsProcessorService } from './stats/stats-processor.service';
 
 @Injectable()
 export class ProcessorFactoryService {
@@ -22,6 +23,7 @@ export class ProcessorFactoryService {
     @Inject(UserTopicProcessorService) userTopic: UserTopicProcessorService,
     @Inject(SentimentProcessorService) sentiment: SentimentProcessorService,
     @Inject(DatetimeProcessorService) datetime: DatetimeProcessorService,
+    @Inject(StatsProcessorService) stats: StatsProcessorService,
   ) {
     this.processors.set(tfidf.name, tfidf);
     this.processors.set(smiley.name, smiley);
@@ -29,6 +31,7 @@ export class ProcessorFactoryService {
     this.processors.set(userTopic.name, userTopic);
     this.processors.set(sentiment.name, sentiment);
     this.processors.set(datetime.name, datetime);
+    this.processors.set(stats.name, stats);
   }
 
   hasProcessor(name: string): boolean {

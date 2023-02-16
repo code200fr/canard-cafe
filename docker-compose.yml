@@ -31,15 +31,12 @@ services:
     networks:
       - canard
     healthcheck:
-      test: echo 'db.runCommand("ping").ok' | mongo localhost:${MONGO_PORT}/coin --quiet
+      test: "echo 'db.runCommand(\"ping\").ok' | mongo localhost:${MONGO_PORT}/coin --quiet"
       interval: 30s
       timeout: 10s
       retries: 3
     volumes:
-      - mongodb_data_container:/data/db
-
-volumes:
-  mongodb_data_container:
+      - ./var/mongodb:/data/db
 
 networks:
   canard:

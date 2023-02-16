@@ -17,6 +17,7 @@ import { UserTopicProcessorService } from './processor/user-topic/user-topic-pro
 import { SentimentProcessorService } from './processor/sentiment/sentiment-processor.service';
 import { DatetimeProcessorService } from './processor/datetime/datetime-processor.service';
 import { TopicController } from './topic/topic.controller';
+import { StatsProcessorService } from './processor/stats/stats-processor.service';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { TopicController } from './topic/topic.controller';
     UserTopicProcessorService,
     SentimentProcessorService,
     DatetimeProcessorService,
+    StatsProcessorService,
     TopicRepositoryService,
     UserRepositoryService,
   ],

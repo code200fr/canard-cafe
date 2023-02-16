@@ -5,12 +5,41 @@ import { Expression, Model } from 'mongoose';
 import { AllTokens, Tokens, TokensMap } from '../processor/tfidf/tfidf.service';
 import { ParsedIndex, ParsedTopic } from '../content-parser/parsed-index';
 import { ProcessorsData } from '../processor/processor-factory.service';
+import { Statistics } from '../processor/stats/stats-processor.service';
+import fs from 'fs';
+import path from 'path';
+import * as process from 'process';
 
 @Injectable()
 export class TopicRepositoryService {
+  protected stats: Statistics;
+
   constructor(
     @InjectModel(Topic.name) private topicModel: Model<TopicDocument>,
   ) {}
+
+  getStatistics(): Statistics {
+    if (this.stats !== undefined) {
+      return this.stats;
+    }
+
+    const file: string = path.join(
+      process.cwd(),
+      'var',
+      'processed',
+      'stats.json',
+    );
+
+    if (!fs.existsSync(file)) {
+      this.stats = null;
+      return this.stats;
+    }
+
+    const data: string = fs.readFileSync(file, 'utf8');
+    this.stats = JSON.parse(data) as Statistics;
+
+    return this.stats;
+  }
 
   async importAll(
     index: ParsedIndex,

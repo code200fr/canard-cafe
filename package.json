@@ -21,7 +21,7 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "scrap": "node dist/cli scrap",
     "parse": "node dist/cli parse",
-    "process": "node dist/cli process datetime",
+    "process": "node dist/cli process stats",
     "persist": "node dist/cli persist"
   },
   "dependencies": {

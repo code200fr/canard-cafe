@@ -9,7 +9,12 @@ export class TopicController {
   ) {}
 
   @Get('list')
-  async get() {
+  async list() {
     return this.topicRepo.allTitle();
+  }
+
+  @Get('stats')
+  async stats() {
+    return this.topicRepo.getStatistics();
   }
 }

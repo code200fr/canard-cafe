@@ -66,11 +66,10 @@ async function graph(app: INestApplicationContext) {
     fs.readFileSync('./var/data.json', 'utf-8'),
   );
 
-  const PostCountThreshold = 250;
+  const PostCountThreshold = 100;
 
   const factory: ProcessorFactoryService = app.get(ProcessorFactoryService);
   const index: ParsedIndex = new ParsedIndex().unSerialize(data);
-  const userNameIndex: UserNameIndex = index.getUserNameIndex();
   const userIdIndex: UserIdIndex = index.getUserIdIndex();
   const countIndex: Map<number, number> = index.getPostCountIndex();
 
