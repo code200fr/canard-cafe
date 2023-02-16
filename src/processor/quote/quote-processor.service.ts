@@ -14,7 +14,10 @@ export class QuoteProcessorService implements ProcessorInterface {
   name = 'quote';
   private logger: Logger = new Logger(QuoteProcessorService.name);
 
-  run(index: ParsedIndex, options?: ProcessorOptions): Promise<unknown> {
+  run(
+    index: ParsedIndex,
+    options?: ProcessorOptions,
+  ): Promise<ProcessedQuotes> {
     const quotes: Map<number, UserQuotes> = new Map<number, UserQuotes>();
     const quotesBy: Map<number, UserQuotes> = new Map<number, UserQuotes>();
     const usernameIndex: UserNameIndex = index.getUserNameIndex();
@@ -74,3 +77,5 @@ export type Quote = {
   count: number;
 };
 export type Quotes = Array<Quote>;
+export type QuoteMap = Map<number, UserQuotes>;
+export type ProcessedQuotes = Record<'from' | 'by', QuoteMap>;

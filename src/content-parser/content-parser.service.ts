@@ -14,6 +14,8 @@ import {
 export class ContentParserService {
   protected readonly logger = new Logger(ContentParserService.name);
 
+  public minAge: number = null; // minimum post date in ms timestamp
+
   async parseTopic(id: number, index: ParsedIndex) {
     const topicPath: string = path.join('./var/raw', id.toString(10));
 
@@ -88,6 +90,24 @@ export class ContentParserService {
         messageElement.attributes['id'].split('_').pop(),
       );
 
+      const dateStr: string = messageElement
+        .querySelector('.postdate .date')
+        .textContent.trim();
+
+      const fullDateParts: string[] = dateStr
+        .split(',')
+        .map((entry) => entry.trim());
+      const dp: string[] = fullDateParts[0].split('/'); // dp = date parts
+      const tp: string[] = fullDateParts[1].split('h'); // tp = time parts
+      const isoDate = `${dp[2]}-${dp[1]}-${dp[0]} ${tp[0]}:${tp[1]}`;
+      const timestamp: number = Date.parse(isoDate);
+
+      if (this.minAge !== null) {
+        if (timestamp < this.minAge) {
+          continue;
+        }
+      }
+
       let author: ParsedUser;
 
       const userLink: HTMLElement = messageElement.querySelector('.username');
@@ -131,8 +151,15 @@ export class ContentParserService {
         topic.op = author.id;
       }
 
-      const quotesElements: HTMLElement[] =
-        messageElement.querySelectorAll('.bbcode_quote');
+      const scripts: HTMLElement[] = messageElement.querySelectorAll('script');
+
+      scripts.forEach((script: HTMLElement) => {
+        script.remove();
+      });
+
+      const quotesElements: HTMLElement[] = messageElement.querySelectorAll(
+        '.content .bbcode_quote',
+      );
 
       const quotes: ParsedQuote[] = [];
 
@@ -169,18 +196,6 @@ export class ContentParserService {
         .map((smileyElement: HTMLElement) => {
           return smileyElement.attributes['title'];
         });
-
-      const dateStr: string = messageElement
-        .querySelector('.postdate .date')
-        .textContent.trim();
-
-      const fullDateParts: string[] = dateStr
-        .split(',')
-        .map((entry) => entry.trim());
-      const dp: string[] = fullDateParts[0].split('/'); // dp = date parts
-      const tp: string[] = fullDateParts[1].split('h'); // tp = time parts
-      const isoDate = `${dp[2]}-${dp[1]}-${dp[0]} ${tp[0]}:${tp[1]}`;
-      const timestamp: number = Date.parse(isoDate);
 
       const post: ParsedPost = {
         author: author.id,

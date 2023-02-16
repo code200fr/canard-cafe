@@ -36,6 +36,17 @@ export class TopicRepositoryService {
     return this.topicModel.deleteMany();
   }
 
+  async allTitle(): Promise<Partial<Topic>[]> {
+    return this.topicModel.find({}).then((topics: Topic[]) => {
+      return topics.map((topic: Topic) => {
+        return {
+          id: topic.id,
+          title: topic.title,
+        };
+      });
+    });
+  }
+
   async search(token: string): Promise<Topic[]> {
     return this.topicModel.find({
       tokens: {

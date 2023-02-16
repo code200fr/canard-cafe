@@ -1,6 +1,17 @@
-import { Controller, Get, Inject, Param, Query } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Inject,
+  Param,
+  Query,
+  Res,
+  StreamableFile,
+} from '@nestjs/common';
 import { UserRepositoryService } from './user-repository.service';
 import { User } from './user.schema';
+import type { Response } from 'express';
+import fs from 'fs';
+import path from 'path';
 
 @Controller('user')
 export class UserController {
@@ -41,6 +52,20 @@ export class UserController {
     const user: User = await this.userRepo.byName(params.name);
 
     return user.getTopTokens();
+  }
+
+  @Get('graph')
+  async graph(@Res({ passthrough: true }) res: Response) {
+    const file = fs.createReadStream(
+      path.join(process.cwd(), 'var', 'community.gexf'),
+    );
+
+    res.set({
+      'Content-Type': 'gephi/gexf',
+      'Content-Disposition': 'attachment; filename="community.gexf"',
+    });
+
+    return new StreamableFile(file);
   }
 
   @Get(':name')

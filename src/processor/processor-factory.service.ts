@@ -35,6 +35,10 @@ export class ProcessorFactoryService {
     return this.processors.has(name);
   }
 
+  getProcessor(name: string): ProcessorInterface {
+    return this.processors.get(name);
+  }
+
   names(): string[] {
     return Array.from(this.processors.keys());
   }

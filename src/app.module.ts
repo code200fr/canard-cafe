@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
 import { HttpModule } from '@nestjs/axios';
-import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ScrapperService } from './scrapper/scrapper.service';
 import { ContentParserService } from './content-parser/content-parser.service';
@@ -17,6 +16,7 @@ import { QuoteProcessorService } from './processor/quote/quote-processor.service
 import { UserTopicProcessorService } from './processor/user-topic/user-topic-processor.service';
 import { SentimentProcessorService } from './processor/sentiment/sentiment-processor.service';
 import { DatetimeProcessorService } from './processor/datetime/datetime-processor.service';
+import { TopicController } from './topic/topic.controller';
 
 @Module({
   imports: [
@@ -27,7 +27,7 @@ import { DatetimeProcessorService } from './processor/datetime/datetime-processo
       { name: User.name, schema: UserSchema },
     ]),
   ],
-  controllers: [AppController, UserController],
+  controllers: [UserController, TopicController],
   providers: [
     AppService,
     ScrapperService,
