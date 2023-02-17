@@ -9,11 +9,6 @@ services:
       - .:/app
       - /app/node_modules
       - ./../canard-cafe-front/build:/app/front
-    deploy:
-      resources:
-        limits:
-          cpus: "6.0"
-          memory: 16G
     ports:
       - "${APP_PORT}:${APP_INTERNAL_PORT}"
     depends_on:
